@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Memory System - API 参考文档</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --code-bg: #f1f5f9;
+    --code-border: #cbd5e1;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* Navigation */
+  .top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    height: 56px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .top-nav .logo {
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--primary);
+    margin-right: 32px;
+    white-space: nowrap;
+  }
+  .top-nav .logo span { color: var(--text); font-weight: 400; }
+  .top-nav a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    margin-right: 20px;
+    transition: color 0.2s;
+  }
+  .top-nav a:hover { color: var(--primary); }
+
+  /* Layout */
+  .layout {
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 32px;
+    gap: 32px;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .sidebar-section { margin-bottom: 20px; }
+  .sidebar-section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .sidebar-section a {
+    display: block;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13.5px;
+    padding: 4px 0 4px 12px;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .sidebar-section a:hover {
+    color: var(--primary);
+    border-left-color: var(--primary);
+    background: var(--primary-light);
+  }
+
+  /* Main content */
+  .main { flex: 1; min-width: 0; }
+
+  /* Section */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary-light);
+    color: var(--text);
+  }
+  .section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 24px 0 12px;
+    color: var(--primary);
+  }
+  .section p {
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* Method card */
+  .method-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .method-header {
+    background: var(--code-bg);
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: default;
+  }
+  .method-header .method-name {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--primary);
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+  }
+  .method-header .method-brief {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .method-body { padding: 18px; }
+
+  /* Signature */
+  .signature {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin-bottom: 14px;
+  }
+  .signature .kw { color: #c084fc; }
+  .signature .fn { color: #60a5fa; }
+  .signature .param { color: #fbbf24; }
+  .signature .type { color: #34d399; }
+  .signature .default { color: #94a3b8; }
+  .signature .str { color: #fb923c; }
+
+  /* Params table */
+  .params-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+    font-size: 13.5px;
+  }
+  .params-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--code-bg);
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .params-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .params-table tr:last-child td { border-bottom: none; }
+  .params-table .param-name {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    color: var(--primary);
+    white-space: nowrap;
+  }
+  .params-table .param-type {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Return */
+  .return-block {
+    background: var(--code-bg);
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    font-size: 13.5px;
+  }
+  .return-block strong { color: var(--text); }
+  .return-block code {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 12.5px;
+    background: var(--surface);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--code-border);
+  }
+
+  /* Code example */
+  .example {
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .example-label {
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .example pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .example pre .cm { color: #64748b; }
+  .example pre .st { color: #fb923c; }
+  .example pre .kw { color: #c084fc; }
+  .example pre .fn { color: #60a5fa; }
+  .example pre .var { color: #fbbf24; }
+  .example pre .op { color: #94a3b8; }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge-new { background: #dcfce7; color: #16a34a; }
+  .badge-required { background: #fef3c7; color: #92400e; }
+  .badge-optional { background: #e0e7ff; color: #4338ca; }
+
+  /* Config field */
+  .config-field {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .config-field:last-child { border-bottom: none; }
+  .config-field .field-name {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary);
+  }
+  .config-field .field-type {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+  }
+  .config-field .field-desc {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .config-field .field-default {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .config-field .field-default code {
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--code-border);
+    font-size: 11.5px;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    color: #fff;
+    padding: 48px 32px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+  }
+  .hero h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+  .hero p { color: rgba(255,255,255,0.85); font-size: 15px; max-width: 680px; }
+  .hero .version {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-top: 12px;
+  }
+
+  /* Quick start code block */
+  .quickstart-block {
+    background: #1e293b;
+    border-radius: 6px;
+    padding: 20px;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .quickstart-block pre {
+    color: #e2e8f0;
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .layout { padding: 16px; }
+    .section { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top Navigation -->
+<nav class="top-nav">
+  <div class="logo">AgentMemory<span> v11.0</span></div>
+  <a href="#overview">概述</a>
+  <a href="#quickstart">快速开始</a>
+  <a href="#config">配置</a>
+  <a href="#api">API 参考</a>
+</nav>
+
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-section">
+    <h3>快速导航</h3>
+    <a href="#overview">系统概述</a>
+    <a href="#quickstart">快速开始</a>
+    <a href="#config">AgentMemoryConfig</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>记忆存储</h3>
+    <a href="#remember">remember</a>
+    <a href="#remember_fact">remember_fact</a>
+    <a href="#remember_conversation">remember_conversation</a>
+    <a href="#add_to_working_memory">add_to_working_memory</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>记忆检索</h3>
+    <a href="#recall">recall</a>
+    <a href="#recall_for_prompt">recall_for_prompt</a>
+    <a href="#get_relevant_context">get_relevant_context</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>记忆管理</h3>
+    <a href="#update_memory">update_memory</a>
+    <a href="#delete_memory">delete_memory</a>
+    <a href="#forget_memory">forget_memory</a>
+    <a href="#get_memory">get_memory</a>
+    <a href="#get_all_memories">get_all_memories</a>
+    <a href="#count_memories">count_memories</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>知识图谱</h3>
+    <a href="#add_entity">add_entity</a>
+    <a href="#add_relation">add_relation</a>
+    <a href="#search_entities">search_entities</a>
+    <a href="#find_related">find_related</a>
+    <a href="#find_path">find_path</a>
+    <a href="#get_neighbors">get_neighbors</a>
+    <a href="#build_knowledge_from_text">build_knowledge_from_text</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>版本控制</h3>
+    <a href="#get_version_history">get_version_history</a>
+    <a href="#rollback_memory">rollback_memory</a>
+    <a href="#get_audit_log">get_audit_log</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>压缩与冲突</h3>
+    <a href="#compress_memories">compress_memories</a>
+    <a href="#detect_conflicts">detect_conflicts</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>会话管理</h3>
+    <a href="#add_interaction">add_interaction</a>
+    <a href="#get_conversation_history">get_conversation_history</a>
+    <a href="#get_conversation_context">get_conversation_context</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>工作记忆</h3>
+    <a href="#set_focus">set_focus</a>
+    <a href="#get_focus">get_focus</a>
+    <a href="#pop_focus">pop_focus</a>
+    <a href="#get_working_memory_snapshot">get_working_memory_snapshot</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>统计与监控</h3>
+    <a href="#get_stats">get_stats</a>
+    <a href="#health_check">health_check</a>
+    <a href="#lifecycle_maintenance">lifecycle_maintenance</a>
+  </div>
+  <div class="sidebar-section">
+    <h3>持久化</h3>
+    <a href="#export_memories">export_memories</a>
+    <a href="#import_memories">import_memories</a>
+    <a href="#save">save</a>
+    <a href="#close">close</a>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+
+<!-- ==================== 系统概述 ==================== -->
+<div class="hero" id="overview">
+  <h1>Agent Memory System</h1>
+  <p>高度模块化的 Agent 记忆管理框架，为 AI Agent 提供完整的短期记忆、长期记忆、知识图谱和结构化存储能力。支持语义检索、记忆衰减、版本控制、冲突检测等高级功能。</p>
+  <div class="version">v11.0.0</div>
+</div>
+
+<div class="section">
+  <h2>系统概述</h2>
+  <p>Agent Memory System 是一个面向 AI Agent 的记忆管理框架，模拟人类记忆机制，提供以下核心能力：</p>
+  <p><strong>短期记忆（工作记忆）</strong> -- 临时上下文缓存，支持焦点管理和快速访问，容量有限但响应迅速。</p>
+  <p><strong>长期记忆（向量存储）</strong> -- 基于语义相似度的持久化记忆，支持多种可插拔后端（ChromaDB / FAISS / 内存向量存储 / Redis）。</p>
+  <p><strong>知识图谱</strong> -- 基于 NetworkX 的实体关系图谱，支持实体搜索、路径查找和从文本自动构建。</p>
+  <p><strong>结构化存储</strong> -- 基于 SQLite 的偏好、事实和交互日志管理。</p>
+  <p><strong>高级功能</strong> -- 混合搜索引擎（RRF 融合）、记忆衰减、记忆压缩、冲突检测、版本控制、审计日志。</p>
+</div>
+
+<!-- ==================== 快速开始 ==================== -->
+<div class="section" id="quickstart">
+  <h2>快速开始</h2>
+
+  <h3>安装</h3>
+  <div class="quickstart-block">
+    <pre><span class="cm"># 基础安装（零外部依赖，使用内置 FakeEmbedding）</span>
+pip install -e .
+
+<span class="cm"># 可选：安装真实嵌入模型支持</span>
+pip install sentence-transformers
+
+<span class="cm"># 可选：安装向量存储后端</span>
+pip install chromadb faiss-cpu</pre>
+  </div>
+
+  <h3>基本用法</h3>
+  <div class="quickstart-block">
+    <pre><span class="kw">from</span> memory_system <span class="kw">import</span> AgentMemory, AgentMemoryConfig
+
+<span class="cm"># 1. 创建记忆系统实例</span>
+memory = AgentMemory()
+
+<span class="cm"># 2. 存储记忆</span>
+memory.remember(
+    <span class="st">"Python 是一种广泛用于 AI 和数据科学的编程语言"</span>,
+    memory_type=<span class="st">"semantic"</span>,
+    category=<span class="st">"knowledge"</span>,
+    importance=<span class="st">0.9</span>,
+    tags=[<span class="st">"编程"</span>, <span class="st">"Python"</span>, <span class="st">"AI"</span>],
+)
+
+<span class="cm"># 3. 检索记忆</span>
+results = memory.recall(<span class="st">"Python 编程语言"</span>, top_k=<span class="st">3</span>)
+<span class="kw">for</span> r <span class="kw">in</span> results:
+    print(f<span class="st">"[{r['score']:.4f}] {r['content']}"</span>)
+
+<span class="cm"># 4. 获取上下文（用于 LLM 提示）</span>
+context = memory.get_relevant_context(<span class="st">"Python 有什么用途？"</span>)
+print(context)
+
+<span class="cm"># 5. 使用上下文管理器自动保存和释放</span>
+<span class="kw">with</span> AgentMemory() <span class="kw">as</span> mem:
+    mem.remember(<span class="st">"重要信息"</span>, importance=<span class="st">0.9</span>)
+    <span class="cm"># 退出时自动调用 save() 和 close()</span></pre>
+  </div>
+</div>
+
+<!-- ==================== 配置 ==================== -->
+<div class="section" id="config">
+  <h2>AgentMemoryConfig 配置</h2>
+  <p>AgentMemoryConfig 是系统的主配置类，组合所有子模块配置。所有字段均有默认值，可直接使用 <code>AgentMemory()</code> 以默认配置初始化。</p>
+
+  <div class="method-card">
+    <div class="method-header">
+      <div class="method-name">class AgentMemoryConfig</div>
+      <div class="method-brief">基于 Pydantic BaseModel 的配置类，支持类型校验和默认值。</div>
+    </div>
+    <div class="method-body">
+      <div class="config-field">
+        <span class="field-name">short_term</span>
+        <span class="field-type">dict</span>
+        <div class="field-desc">短期记忆配置，传递给 ShortTermMemory 构造器。</div>
+        <div class="field-default">默认值: <code>{"working_memory_capacity": 7, "history_limit": 50}</code></div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">long_term</span>
+        <span class="field-type">LongTermMemoryConfig</span>
+        <div class="field-desc">长期记忆配置，包含嵌入模型和向量存储设置。</div>
+        <div class="field-default">默认值: <code>LongTermMemoryConfig()</code></div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">knowledge_graph</span>
+        <span class="field-type">dict</span>
+        <div class="field-desc">知识图谱配置。</div>
+        <div class="field-default">默认值: <code>{"enabled": True}</code></div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">structured_store</span>
+        <span class="field-type">dict</span>
+        <div class="field-desc">结构化存储配置。</div>
+        <div class="field-default">默认值: <code>{"db_path": ":memory:", "enabled": True}</code></div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">consolidation_threshold</span>
+        <span class="field-type">float</span>
+        <div class="field-desc">记忆巩固的重要性阈值，超过此阈值的工作记忆将被迁移到长期记忆。</div>
+        <div class="field-default">默认值: <code>0.6</code></div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">auto_consolidate</span>
+        <span class="field-type">bool</span>
+        <div class="field-desc">是否启用自动记忆巩固。</div>
+        <div class="field-default">默认值: <code>True</code></div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">default_top_k</span>
+        <span class="field-type">int</span>
+        <div class="field-desc">默认检索返回数量。</div>
+        <div class="field-default">默认值: <code>5</code></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>LongTermMemoryConfig 子配置</h3>
+  <div class="method-card">
+    <div class="method-header">
+      <div class="method-name">class LongTermMemoryConfig</div>
+      <div class="method-brief">长期记忆子配置，控制嵌入模型和向量存储后端。</div>
+    </div>
+    <div class="method-body">
+      <div class="config-field">
+        <span class="field-name">embedding</span>
+        <span class="field-type">EmbeddingConfig</span>
+        <div class="field-desc">嵌入模型配置，支持 provider（auto/fake/sentence-transformer/openai）、model_name、device、dimension 等字段。</div>
+        <div class="field-default">默认值: <code>EmbeddingConfig()</code>（provider="auto"）</div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">vector_store</span>
+        <span class="field-type">dict</span>
+        <div class="field-desc">向量存储后端配置。支持 backend（memory/chroma/faiss）和 dimension 等参数。</div>
+        <div class="field-default">默认值: <code>{"backend": "memory"}</code></div>
+      </div>
+      <div class="config-field">
+        <span class="field-name">auto_consolidate</span>
+        <span class="field-type">bool</span>
+        <div class="field-desc">是否启用长期记忆层的自动巩固。</div>
+        <div class="field-default">默认值: <code>False</code></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>配置示例</h3>
+  <div class="example">
+    <div class="example-label">配置示例</div>
+    <pre><span class="kw">from</span> memory_system <span class="kw">import</span> AgentMemory, AgentMemoryConfig, LongTermMemoryConfig
+
+config = AgentMemoryConfig(
+    short_term={<span class="st">"working_memory_capacity"</span>: <span class="st">10</span>, <span class="st">"history_limit"</span>: <span class="st">100</span>},
+    long_term=LongTermMemoryConfig(
+        embedding={<span class="st">"provider"</span>: <span class="st">"fake"</span>, <span class="st">"dimension"</span>: <span class="st">64</span>},
+        vector_store={<span class="st">"backend"</span>: <span class="st">"memory"</span>},
+    ),
+    knowledge_graph={<span class="st">"enabled"</span>: <span class="st">True</span>},
+    structured_store={<span class="st">"db_path"</span>: <span class="st">":memory:"</span>, <span class="st">"enabled"</span>: <span class="st">True</span>},
+    consolidation_threshold=<span class="st">0.6</span>,
+    auto_consolidate=<span class="st">False</span>,
+    default_top_k=<span class="st">5</span>,
+)
+
+memory = AgentMemory(config=config)</pre>
+  </div>
+</div>
+
+<!-- ==================== API 参考 ==================== -->
+<div class="section" id="api">
+  <h2>API 参考</h2>
+  <p>以下按功能分组列出 <code>AgentMemory</code> 类的所有公开方法。</p>
+
+  <!-- ===== 记忆存储 ===== -->
+  <h3>记忆存储</h3>
+
+  <!-- remember -->
+  <div class="method-card" id="remember">
+    <div class="method-header">
+      <div class="method-name">remember</div>
+      <div class="method-brief">记住信息到长期记忆（核心存储方法）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">remember</span>(
+    content: <span class="type">str</span>,
+    memory_type: <span class="type">str</span> = <span class="str">"semantic"</span>,
+    category: <span class="type">str</span> = <span class="str">"general"</span>,
+    importance: <span class="type">float</span> = <span class="st">0.5</span>,
+    **kwargs,
+) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">content</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>记忆内容，不能为空</td></tr>
+          <tr><td class="param-name">memory_type</td><td><span class="param-type">str</span> <span class="badge badge-optional">可选</span></td><td>记忆类型：episodic / semantic / procedural / fact / conversation</td></tr>
+          <tr><td class="param-name">category</td><td><span class="param-type">str</span> <span class="badge badge-optional">可选</span></td><td>类别标签，用于过滤检索</td></tr>
+          <tr><td class="param-name">importance</td><td><span class="param-type">float</span> <span class="badge badge-optional">可选</span></td><td>重要性评分（0.0 ~ 1.0），影响记忆衰减和巩固</td></tr>
+          <tr><td class="param-name">**kwargs</td><td><span class="param-type">Any</span></td><td>额外参数：tags（标签列表）、source（来源）、metadata（元数据字典）等</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 记忆 ID</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory_id = memory.remember(
+    <span class="st">"Python 是一种解释型高级编程语言"</span>,
+    memory_type=<span class="st">"semantic"</span>,
+    category=<span class="st">"knowledge"</span>,
+    importance=<span class="st">0.9</span>,
+    tags=[<span class="st">"编程"</span>, <span class="st">"Python"</span>],
+)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- remember_fact -->
+  <div class="method-card" id="remember_fact">
+    <div class="method-header">
+      <div class="method-name">remember_fact</div>
+      <div class="method-brief">记住事实（同时存入向量存储和结构化存储）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">remember_fact</span>(
+    fact: <span class="type">str</span>,
+    category: <span class="type">str</span> = <span class="str">"knowledge"</span>,
+    source: <span class="type">str</span> = <span class="str">"user"</span>,
+    confidence: <span class="type">float</span> = <span class="st">1.0</span>,
+    **kwargs,
+) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">fact</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>事实内容，不能为空</td></tr>
+          <tr><td class="param-name">category</td><td><span class="param-type">str</span></td><td>类别标签</td></tr>
+          <tr><td class="param-name">source</td><td><span class="param-type">str</span></td><td>事实来源（如 "user"、"document"）</td></tr>
+          <tr><td class="param-name">confidence</td><td><span class="param-type">float</span></td><td>置信度（0.0 ~ 1.0）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 记忆 ID</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.remember_fact(
+    <span class="st">"张三有5年Python开发经验"</span>,
+    category=<span class="st">"personal"</span>,
+    source=<span class="st">"conversation"</span>,
+    confidence=<span class="st">0.95</span>,
+)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- remember_conversation -->
+  <div class="method-card" id="remember_conversation">
+    <div class="method-header">
+      <div class="method-name">remember_conversation</div>
+      <div class="method-brief">记住对话内容（添加到交互历史，重要内容同时存入长期记忆）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">remember_conversation</span>(
+    content: <span class="type">str</span>,
+    speaker: <span class="type">str</span> = <span class="str">"user"</span>,
+    important: <span class="type">bool</span> = <span class="st">False</span>,
+    **kwargs,
+) -> <span class="type">Optional[str]</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">content</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>对话内容</td></tr>
+          <tr><td class="param-name">speaker</td><td><span class="param-type">str</span></td><td>说话者标识（如 "user"、"assistant"）</td></tr>
+          <tr><td class="param-name">important</td><td><span class="param-type">bool</span></td><td>是否为重要对话，重要内容会自动存入长期记忆</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>Optional[str]</code> -- 长期记忆 ID（重要内容时），否则 None</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.remember_conversation(<span class="st">"你好，我是张三"</span>, speaker=<span class="st">"user"</span>, important=<span class="st">True</span>)
+memory.remember_conversation(<span class="st">"你好张三！有什么可以帮你的？"</span>, speaker=<span class="st">"assistant"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- add_to_working_memory -->
+  <div class="method-card" id="add_to_working_memory">
+    <div class="method-header">
+      <div class="method-name">add_to_working_memory</div>
+      <div class="method-brief">添加信息到工作记忆（短期记忆）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">add_to_working_memory</span>(
+    key: <span class="type">str</span>,
+    content: <span class="type">str</span>,
+    importance: <span class="type">float</span> = <span class="st">0.5</span>,
+    memory_type: <span class="type">str</span> = <span class="str">"general"</span>,
+    **metadata,
+) -> <span class="type">bool</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">key</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>记忆键（唯一标识，用于后续引用）</td></tr>
+          <tr><td class="param-name">content</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>记忆内容</td></tr>
+          <tr><td class="param-name">importance</td><td><span class="param-type">float</span></td><td>重要性（0.0 ~ 1.0），超过巩固阈值时会被迁移到长期记忆</td></tr>
+          <tr><td class="param-name">memory_type</td><td><span class="param-type">str</span></td><td>记忆类型（如 "fact"、"goal"、"event"）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>bool</code> -- 是否添加成功</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.add_to_working_memory(<span class="st">"user_name"</span>, <span class="st">"用户的名字是张三"</span>, importance=<span class="st">0.9</span>, memory_type=<span class="st">"fact"</span>)
+memory.add_to_working_memory(<span class="st">"current_task"</span>, <span class="st">"当前正在讨论项目进度"</span>, importance=<span class="st">0.8</span>, memory_type=<span class="st">"goal"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 记忆检索 ===== -->
+  <h3>记忆检索</h3>
+
+  <!-- recall -->
+  <div class="method-card" id="recall">
+    <div class="method-header">
+      <div class="method-name">recall</div>
+      <div class="method-brief">回忆信息（核心检索方法，支持混合搜索引擎 RRF 融合）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">recall</span>(
+    query: <span class="type">str</span>,
+    top_k: <span class="type">int</span> = <span class="st">None</span>,
+    from_short_term: <span class="type">bool</span> = <span class="st">True</span>,
+    from_long_term: <span class="type">bool</span> = <span class="st">True</span>,
+    exclude_sources: <span class="type">list</span> = <span class="st">None</span>,
+    use_hybrid: <span class="type">bool</span> = <span class="st">None</span>,
+    **filters,
+) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">query</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>查询内容</td></tr>
+          <tr><td class="param-name">top_k</td><td><span class="param-type">int</span></td><td>返回数量，默认使用配置中的 default_top_k</td></tr>
+          <tr><td class="param-name">from_short_term</td><td><span class="param-type">bool</span></td><td>是否检索短期记忆</td></tr>
+          <tr><td class="param-name">from_long_term</td><td><span class="param-type">bool</span></td><td>是否检索长期记忆</td></tr>
+          <tr><td class="param-name">exclude_sources</td><td><span class="param-type">list</span></td><td>排除的来源列表（如 ["structured"]）</td></tr>
+          <tr><td class="param-name">use_hybrid</td><td><span class="param-type">bool</span></td><td>是否使用混合搜索引擎，None 表示自动判断</td></tr>
+          <tr><td class="param-name">**filters</td><td><span class="param-type">Any</span></td><td>过滤条件：category、tags、memory_type、threshold、time_range、min_importance</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list[dict]</code> -- 检索结果列表，每项包含 content、score、source、memory_type、category、importance、timestamp、metadata、id</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre><span class="cm"># 基本语义搜索</span>
+results = memory.recall(<span class="st">"Python编程语言"</span>, top_k=<span class="st">3</span>)
+
+<span class="cm"># 按类别过滤</span>
+results = memory.recall(<span class="st">"项目"</span>, top_k=<span class="st">3</span>, category=<span class="st">"work"</span>)
+
+<span class="cm"># 仅检索长期记忆，排除结构化数据</span>
+results = memory.recall(<span class="st">"用户偏好"</span>, from_short_term=<span class="st">False</span>, exclude_sources=[<span class="st">"structured"</span>])
+
+<span class="cm"># 使用时间范围和最低重要性过滤</span>
+results = memory.recall(
+    <span class="st">"重要决策"</span>,
+    time_range=(<span class="st">1700000000</span>, <span class="st">1735689600</span>),
+    min_importance=<span class="st">0.7</span>,
+)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- recall_for_prompt -->
+  <div class="method-card" id="recall_for_prompt">
+    <div class="method-header">
+      <div class="method-name">recall_for_prompt</div>
+      <div class="method-brief">回忆信息并格式化为 LLM 提示文本</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">recall_for_prompt</span>(
+    query: <span class="type">str</span>,
+    max_short_term: <span class="type">int</span> = <span class="st">3</span>,
+    max_long_term: <span class="type">int</span> = <span class="st">3</span>,
+) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">query</td><td><span class="param-type">str</span></td><td>查询内容</td></tr>
+          <tr><td class="param-name">max_short_term</td><td><span class="param-type">int</span></td><td>短期记忆最大数量</td></tr>
+          <tr><td class="param-name">max_long_term</td><td><span class="param-type">int</span></td><td>长期记忆最大数量</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 格式化的记忆文本，包含【工作记忆】和【长期记忆】分区</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>prompt_context = memory.recall_for_prompt(<span class="st">"项目进度"</span>, max_short_term=<span class="st">2</span>, max_long_term=<span class="st">5</span>)
+<span class="cm"># 输出示例:</span>
+<span class="cm"># 【工作记忆】</span>
+<span class="cm"># - [工作记忆] 当前正在讨论项目进度 (相关度: 0.85)</span>
+<span class="cm">#</span>
+<span class="cm"># 【长期记忆】</span>
+<span class="cm"># - [长期记忆] 项目Alpha的截止日期是2025年3月15日 (相关度: 0.72)</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_relevant_context -->
+  <div class="method-card" id="get_relevant_context">
+    <div class="method-header">
+      <div class="method-name">get_relevant_context</div>
+      <div class="method-brief">获取与查询相关的完整上下文（用于构建 LLM 提示）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_relevant_context</span>(
+    query: <span class="type">str</span>,
+    max_items: <span class="type">int</span> = <span class="st">5</span>,
+) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">query</td><td><span class="param-type">str</span></td><td>查询内容</td></tr>
+          <tr><td class="param-name">max_items</td><td><span class="param-type">int</span></td><td>最大条目数</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 格式化的上下文文本，包含【当前焦点】和检索到的相关记忆</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>context = memory.get_relevant_context(<span class="st">"项目Alpha的进度如何？"</span>, max_items=<span class="st">5</span>)
+<span class="cm"># 可直接拼接到 LLM 的 system prompt 中</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 记忆管理 ===== -->
+  <h3>记忆管理</h3>
+
+  <!-- update_memory -->
+  <div class="method-card" id="update_memory">
+    <div class="method-header">
+      <div class="method-name">update_memory</div>
+      <div class="method-brief">更新指定 ID 的长期记忆（自动记录版本变更）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">update_memory</span>(
+    memory_id: <span class="type">str</span>,
+    **kwargs,
+) -> <span class="type">bool</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">memory_id</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>记忆 ID</td></tr>
+          <tr><td class="param-name">**kwargs</td><td><span class="param-type">Any</span></td><td>要更新的字段，如 content、importance、category 等</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>bool</code> -- 是否更新成功</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.update_memory(memory_id, content=<span class="st">"更新后的内容"</span>, importance=<span class="st">0.95</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- delete_memory -->
+  <div class="method-card" id="delete_memory">
+    <div class="method-header">
+      <div class="method-name">delete_memory</div>
+      <div class="method-brief">删除指定 ID 的长期记忆（自动记录版本变更）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">delete_memory</span>(memory_id: <span class="type">str</span>) -> <span class="type">bool</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">memory_id</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>要删除的记忆 ID</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>bool</code> -- 是否删除成功</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>success = memory.delete_memory(memory_id)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- forget_memory -->
+  <div class="method-card" id="forget_memory">
+    <div class="method-header">
+      <div class="method-name">forget_memory</div>
+      <div class="method-brief">遗忘指定 ID 的长期记忆（delete_memory 的语义化别名）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">forget_memory</span>(memory_id: <span class="type">str</span>) -> <span class="type">bool</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">memory_id</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>要遗忘的记忆 ID</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>bool</code> -- 是否遗忘成功</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.forget_memory(memory_id)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_memory -->
+  <div class="method-card" id="get_memory">
+    <div class="method-header">
+      <div class="method-name">get_memory</div>
+      <div class="method-brief">获取指定 ID 的长期记忆</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_memory</span>(memory_id: <span class="type">str</span>) -> <span class="type">Optional[MemoryRecord]</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">memory_id</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>记忆 ID</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>Optional[MemoryRecord]</code> -- MemoryRecord 对象，未找到时返回 None</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>record = memory.get_memory(memory_id)
+<span class="kw">if</span> record:
+    print(record.content, record.importance)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_all_memories -->
+  <div class="method-card" id="get_all_memories">
+    <div class="method-header">
+      <div class="method-name">get_all_memories</div>
+      <div class="method-brief">获取所有长期记忆</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_all_memories</span>(limit: <span class="type">int</span> = <span class="st">100</span>) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">limit</td><td><span class="param-type">int</span></td><td>最大返回数量</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list[MemoryRecord]</code> -- MemoryRecord 对象列表</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>all_memories = memory.get_all_memories(limit=<span class="st">50</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- count_memories -->
+  <div class="method-card" id="count_memories">
+    <div class="method-header">
+      <div class="method-name">count_memories</div>
+      <div class="method-brief">获取长期记忆总数</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">count_memories</span>() -> <span class="type">int</span></div>
+      <div class="return-block"><strong>返回值:</strong> <code>int</code> -- 记忆数量</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>total = memory.count_memories()
+print(f<span class="st">"共有 {total} 条长期记忆"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 知识图谱 ===== -->
+  <h3>知识图谱</h3>
+
+  <!-- add_entity -->
+  <div class="method-card" id="add_entity">
+    <div class="method-header">
+      <div class="method-name">add_entity</div>
+      <div class="method-brief">添加实体到知识图谱</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">add_entity</span>(
+    name: <span class="type">str</span>,
+    entity_type: <span class="type">str</span> = <span class="str">"concept"</span>,
+    description: <span class="type">str</span> = <span class="str">""</span>,
+    **properties,
+) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">name</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>实体名称（唯一标识）</td></tr>
+          <tr><td class="param-name">entity_type</td><td><span class="param-type">str</span></td><td>实体类型（如 "person"、"technology"、"project"）</td></tr>
+          <tr><td class="param-name">description</td><td><span class="param-type">str</span></td><td>实体描述</td></tr>
+          <tr><td class="param-name">**properties</td><td><span class="param-type">Any</span></td><td>额外属性</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 实体名称</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.add_entity(<span class="st">"张三"</span>, entity_type=<span class="st">"person"</span>, description=<span class="st">"软件工程师，负责后端开发"</span>)
+memory.add_entity(<span class="st">"Python"</span>, entity_type=<span class="st">"technology"</span>, description=<span class="st">"编程语言"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- add_relation -->
+  <div class="method-card" id="add_relation">
+    <div class="method-header">
+      <div class="method-name">add_relation</div>
+      <div class="method-brief">添加关系到知识图谱</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">add_relation</span>(
+    source: <span class="type">str</span>,
+    target: <span class="type">str</span>,
+    relation_type: <span class="type">str</span>,
+    weight: <span class="type">float</span> = <span class="st">1.0</span>,
+    **metadata,
+) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">source</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>源实体名称</td></tr>
+          <tr><td class="param-name">target</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>目标实体名称</td></tr>
+          <tr><td class="param-name">relation_type</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>关系类型（如 "works_in"、"uses"、"leads"）</td></tr>
+          <tr><td class="param-name">weight</td><td><span class="param-type">float</span></td><td>关系权重（0.0 ~ 1.0）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 关系标识字符串</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.add_relation(<span class="st">"张三"</span>, <span class="st">"AI部门"</span>, <span class="st">"works_in"</span>, weight=<span class="st">1.0</span>)
+memory.add_relation(<span class="st">"张三"</span>, <span class="st">"Python"</span>, <span class="st">"uses"</span>, weight=<span class="st">0.8</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- search_entities -->
+  <div class="method-card" id="search_entities">
+    <div class="method-header">
+      <div class="method-name">search_entities</div>
+      <div class="method-brief">搜索知识图谱中的实体</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">search_entities</span>(query: <span class="type">str</span>, top_k: <span class="type">int</span> = <span class="st">5</span>) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">query</td><td><span class="param-type">str</span></td><td>搜索查询</td></tr>
+          <tr><td class="param-name">top_k</td><td><span class="param-type">int</span></td><td>返回数量</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list[(Entity, score)]</code> -- 实体和匹配分数的元组列表</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>entities = memory.search_entities(<span class="st">"张三"</span>, top_k=<span class="st">3</span>)
+<span class="kw">for</span> entity, score <span class="kw">in</span> entities:
+    print(f<span class="st">"[{entity.entity_type}] {entity.name}: {entity.description} (score={score:.2f})"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- find_related -->
+  <div class="method-card" id="find_related">
+    <div class="method-header">
+      <div class="method-name">find_related</div>
+      <div class="method-brief">查找与指定实体相关的实体</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">find_related</span>(entity_name: <span class="type">str</span>, top_k: <span class="type">int</span> = <span class="st">5</span>) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">entity_name</td><td><span class="param-type">str</span></td><td>实体名称</td></tr>
+          <tr><td class="param-name">top_k</td><td><span class="param-type">int</span></td><td>返回数量</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list[GraphSearchResult]</code> -- 相关实体搜索结果列表</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>related = memory.find_related(<span class="st">"张三"</span>, top_k=<span class="st">5</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- find_path -->
+  <div class="method-card" id="find_path">
+    <div class="method-header">
+      <div class="method-name">find_path</div>
+      <div class="method-brief">查找两个实体之间的最短路径</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">find_path</span>(source: <span class="type">str</span>, target: <span class="type">str</span>) -> <span class="type">Optional[list[str]]</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">source</td><td><span class="param-type">str</span></td><td>起始实体名称</td></tr>
+          <tr><td class="param-name">target</td><td><span class="param-type">str</span></td><td>目标实体名称</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>Optional[list[str]]</code> -- 实体名称路径列表，不存在路径时返回 None</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>path = memory.find_path(<span class="st">"Python"</span>, <span class="st">"AI部门"</span>)
+<span class="cm"># 返回示例: ["Python", "张三", "AI部门"]</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_neighbors -->
+  <div class="method-card" id="get_neighbors">
+    <div class="method-header">
+      <div class="method-name">get_neighbors</div>
+      <div class="method-brief">获取与指定实体相连的邻居实体</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_neighbors</span>(entity_name: <span class="type">str</span>, max_depth: <span class="type">int</span> = <span class="st">1</span>) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">entity_name</td><td><span class="param-type">str</span></td><td>实体名称</td></tr>
+          <tr><td class="param-name">max_depth</td><td><span class="param-type">int</span></td><td>最大跳数（邻居深度）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list[Entity]</code> -- 邻居实体列表</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>neighbors = memory.get_neighbors(<span class="st">"张三"</span>, max_depth=<span class="st">1</span>)
+<span class="kw">for</span> n <span class="kw">in</span> neighbors:
+    print(n.name, n.entity_type)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- build_knowledge_from_text -->
+  <div class="method-card" id="build_knowledge_from_text">
+    <div class="method-header">
+      <div class="method-name">build_knowledge_from_text</div>
+      <div class="method-brief">从文本中自动提取实体和关系并构建知识图谱</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">build_knowledge_from_text</span>(text: <span class="type">str</span>) -> <span class="type">KnowledgeGraph</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">text</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>输入文本</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>KnowledgeGraph</code> -- 更新后的知识图谱实例</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>text = <span class="st">"张三是一名软件工程师。张三属于AI部门。张三使用Python。"</span>
+memory.build_knowledge_from_text(text)
+stats = memory.get_knowledge_graph_stats()
+print(f<span class="st">"实体: {stats['entity_count']}, 关系: {stats['relation_count']}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 版本控制 ===== -->
+  <h3>版本控制</h3>
+
+  <!-- get_version_history -->
+  <div class="method-card" id="get_version_history">
+    <div class="method-header">
+      <div class="method-name">get_version_history</div>
+      <div class="method-brief">获取指定记忆的版本历史</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_version_history</span>(memory_id: <span class="type">str</span>) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">memory_id</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>记忆 ID</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list[dict]</code> -- 版本历史列表，每项包含 version_id、change_type、timestamp、content_before、content_after、changed_by、change_reason</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>history = memory.get_version_history(memory_id)
+<span class="kw">for</span> v <span class="kw">in</span> history:
+    print(f<span class="st">"[{v['change_type']}] {v['timestamp']}: {v['content_after'][:50]}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- rollback_memory -->
+  <div class="method-card" id="rollback_memory">
+    <div class="method-header">
+      <div class="method-name">rollback_memory</div>
+      <div class="method-brief">回滚指定记忆到历史版本</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">rollback_memory</span>(memory_id: <span class="type">str</span>, version_id: <span class="type">str</span>) -> <span class="type">Optional[str]</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">memory_id</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>记忆 ID</td></tr>
+          <tr><td class="param-name">version_id</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>目标版本 ID（从 get_version_history 获取）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>Optional[str]</code> -- 回滚后的内容，失败返回 None</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>history = memory.get_version_history(memory_id)
+<span class="kw">if</span> len(history) > <span class="st">1</span>:
+    content = memory.rollback_memory(memory_id, history[-<span class="st">2</span>][<span class="st">"version_id"</span>])
+    print(f<span class="st">"已回滚到: {content}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_audit_log -->
+  <div class="method-card" id="get_audit_log">
+    <div class="method-header">
+      <div class="method-name">get_audit_log</div>
+      <div class="method-brief">获取审计日志</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_audit_log</span>(
+    memory_id: <span class="type">str</span> = <span class="st">None</span>,
+    change_type: <span class="type">str</span> = <span class="st">None</span>,
+) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">memory_id</td><td><span class="param-type">str</span></td><td>筛选特定记忆的变更记录</td></tr>
+          <tr><td class="param-name">change_type</td><td><span class="param-type">str</span></td><td>筛选变更类型："create" / "update" / "delete" / "merge" / "compress"</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list</code> -- 审计日志列表</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre><span class="cm"># 获取所有删除操作的审计日志</span>
+logs = memory.get_audit_log(change_type=<span class="st">"delete"</span>)
+
+<span class="cm"># 获取特定记忆的所有变更</span>
+logs = memory.get_audit_log(memory_id=<span class="st">"mem_abc123"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 压缩与冲突 ===== -->
+  <h3>压缩与冲突</h3>
+
+  <!-- compress_memories -->
+  <div class="method-card" id="compress_memories">
+    <div class="method-header">
+      <div class="method-name">compress_memories</div>
+      <div class="method-brief">执行记忆压缩（去重、合并相似、过期清理、摘要生成）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">compress_memories</span>(strategies: <span class="type">list</span> = <span class="st">None</span>) -> <span class="type">dict</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">strategies</td><td><span class="param-type">list</span></td><td>压缩策略列表，None 表示全部策略。可选值："summarize"、"merge"、"dedup"、"expire"</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>dict</code> -- 压缩结果统计，包含 compressed_count、removed_count、merged_groups、summaries_generated、saved_bytes_estimate、duration_ms</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre><span class="cm"># 执行全部压缩策略</span>
+result = memory.compress_memories()
+print(f<span class="st">"压缩了 {result['compressed_count']} 条，删除了 {result['removed_count']} 条"</span>)
+
+<span class="cm"># 仅执行去重和过期清理</span>
+result = memory.compress_memories(strategies=[<span class="st">"dedup"</span>, <span class="st">"expire"</span>])</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- detect_conflicts -->
+  <div class="method-card" id="detect_conflicts">
+    <div class="method-header">
+      <div class="method-name">detect_conflicts</div>
+      <div class="method-brief">检测记忆冲突（事实矛盾、时间冲突、来源冲突、语义矛盾）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">detect_conflicts</span>(conflict_types: <span class="type">list</span> = <span class="st">None</span>) -> <span class="type">dict</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">conflict_types</td><td><span class="param-type">list</span></td><td>冲突类型列表，None 表示全部类型。可选值："factual"、"temporal"、"source"、"semantic"</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>dict</code> -- 冲突检测结果，包含 conflicts_found、auto_resolved、manual_review、duration_ms、conflicts（详细列表）</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>result = memory.detect_conflicts()
+print(f<span class="st">"发现 {result['conflicts_found']} 个冲突，自动解决 {result['auto_resolved']} 个"</span>)
+<span class="kw">for</span> c <span class="kw">in</span> result[<span class="st">"conflicts"</span>]:
+    print(f<span class="st">"  [{c['type']}] {c['description']}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 会话管理 ===== -->
+  <h3>会话管理</h3>
+
+  <!-- add_interaction -->
+  <div class="method-card" id="add_interaction">
+    <div class="method-header">
+      <div class="method-name">add_interaction</div>
+      <div class="method-brief">添加交互记录到会话历史</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">add_interaction</span>(role: <span class="type">str</span>, content: <span class="type">str</span>, **metadata)</div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">role</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>角色（如 "user"、"assistant"、"system"）</td></tr>
+          <tr><td class="param-name">content</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>交互内容</td></tr>
+          <tr><td class="param-name">**metadata</td><td><span class="param-type">Any</span></td><td>额外元数据</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>None</code></div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.add_interaction(<span class="st">"user"</span>, <span class="st">"请帮我查一下项目进度"</span>)
+memory.add_interaction(<span class="st">"assistant"</span>, <span class="st">"项目Alpha目前进展顺利。"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_conversation_history -->
+  <div class="method-card" id="get_conversation_history">
+    <div class="method-header">
+      <div class="method-name">get_conversation_history</div>
+      <div class="method-brief">获取对话历史</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_conversation_history</span>(n: <span class="type">int</span> = <span class="st">10</span>) -> <span class="type">list</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">n</td><td><span class="param-type">int</span></td><td>返回最近 n 条对话</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>list[dict]</code> -- 对话记录列表，每项包含 role、content 等</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>history = memory.get_conversation_history(n=<span class="st">5</span>)
+<span class="kw">for</span> h <span class="kw">in</span> history:
+    print(f<span class="st">"{h['role']}: {h['content']}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_conversation_context -->
+  <div class="method-card" id="get_conversation_context">
+    <div class="method-header">
+      <div class="method-name">get_conversation_context</div>
+      <div class="method-brief">获取格式化的对话上下文</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_conversation_context</span>(max_turns: <span class="type">int</span> = <span class="st">5</span>) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">max_turns</td><td><span class="param-type">int</span></td><td>最大轮数</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 格式化的对话文本</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>context = memory.get_conversation_context(max_turns=<span class="st">5</span>)
+<span class="cm"># 可直接拼接到 LLM 提示中</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 工作记忆 ===== -->
+  <h3>工作记忆</h3>
+
+  <!-- set_focus -->
+  <div class="method-card" id="set_focus">
+    <div class="method-header">
+      <div class="method-name">set_focus</div>
+      <div class="method-brief">设置工作记忆焦点</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">set_focus</span>(key: <span class="type">str</span>) -> <span class="type">bool</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">key</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>要聚焦的工作记忆键</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>bool</code> -- 是否设置成功</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.set_focus(<span class="st">"user_name"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_focus -->
+  <div class="method-card" id="get_focus">
+    <div class="method-header">
+      <div class="method-name">get_focus</div>
+      <div class="method-brief">获取当前工作记忆焦点键</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_focus</span>() -> <span class="type">Optional[str]</span></div>
+      <div class="return-block"><strong>返回值:</strong> <code>Optional[str]</code> -- 焦点键，无焦点时返回 None</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>focus_key = memory.get_focus()
+print(f<span class="st">"当前焦点: {focus_key}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- pop_focus -->
+  <div class="method-card" id="pop_focus">
+    <div class="method-header">
+      <div class="method-name">pop_focus</div>
+      <div class="method-brief">弹出并返回当前工作记忆焦点内容</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">pop_focus</span>() -> <span class="type">Optional[str]</span></div>
+      <div class="return-block"><strong>返回值:</strong> <code>Optional[str]</code> -- 焦点内容，无焦点时返回 None</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>content = memory.pop_focus()
+<span class="kw">if</span> content:
+    print(f<span class="st">"弹出焦点内容: {content}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- get_working_memory_snapshot -->
+  <div class="method-card" id="get_working_memory_snapshot">
+    <div class="method-header">
+      <div class="method-name">get_working_memory_snapshot</div>
+      <div class="method-brief">获取工作记忆完整快照</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_working_memory_snapshot</span>() -> <span class="type">dict</span></div>
+      <div class="return-block"><strong>返回值:</strong> <code>dict</code> -- 工作记忆完整上下文快照，包含 working_memory、history、session_context 等</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>snapshot = memory.get_working_memory_snapshot()
+print(f<span class="st">"工作记忆项数: {len(snapshot.get('working_memory', {}))}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 统计与监控 ===== -->
+  <h3>统计与监控</h3>
+
+  <!-- get_stats -->
+  <div class="method-card" id="get_stats">
+    <div class="method-header">
+      <div class="method-name">get_stats</div>
+      <div class="method-brief">获取记忆系统综合统计信息</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">get_stats</span>() -> <span class="type">dict</span></div>
+      <div class="return-block"><strong>返回值:</strong> <code>dict</code> -- 综合统计字典，包含 session（session_id、interaction_count）、short_term（working_memory_size、history_size）、long_term（total_memories 等）、knowledge_graph（entity_count、relation_count）、structured_store（tables）、compression、conflict_resolver、version_control、decay_engine</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>stats = memory.get_stats()
+print(f<span class="st">"会话ID: {stats['session']['session_id']}"</span>)
+print(f<span class="st">"工作记忆: {stats['short_term']['working_memory_size']} 条"</span>)
+print(f<span class="st">"长期记忆: {stats['long_term']['total_memories']} 条"</span>)
+<span class="kw">if</span> <span class="st">"knowledge_graph"</span> <span class="kw">in</span> stats:
+    print(f<span class="st">"知识图谱: {stats['knowledge_graph']['entity_count']} 个实体"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- health_check -->
+  <div class="method-card" id="health_check">
+    <div class="method-header">
+      <div class="method-name">health_check</div>
+      <div class="method-brief">执行记忆系统健康检查</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">health_check</span>() -> <span class="type">dict</span></div>
+      <div class="return-block"><strong>返回值:</strong> <code>dict</code> -- 健康状态报告，包含 status（"healthy" / "needs_attention"）、memory_count、issues（问题列表）、engines（各引擎状态）</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>report = memory.health_check()
+print(f<span class="st">"状态: {report['status']}"</span>)
+<span class="kw">for</span> issue <span class="kw">in</span> report[<span class="st">"issues"</span>]:
+    print(f<span class="st">"  [{issue['level']}] {issue['message']}"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- lifecycle_maintenance -->
+  <div class="method-card" id="lifecycle_maintenance">
+    <div class="method-header">
+      <div class="method-name">lifecycle_maintenance</div>
+      <div class="method-brief">执行完整的记忆生命周期维护（冲突检测、压缩、统计汇总）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">lifecycle_maintenance</span>(auto_compress: <span class="type">bool</span> = <span class="st">False</span>) -> <span class="type">dict</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">auto_compress</td><td><span class="param-type">bool</span></td><td>是否执行自动压缩（可能较耗时）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>dict</code> -- 维护报告，包含 timestamp、memory_count、conflicts、compression、decay_stats、version_stats</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre><span class="cm"># 建议定期调用（如每天一次）</span>
+report = memory.lifecycle_maintenance(auto_compress=<span class="st">True</span>)
+print(f<span class="st">"维护完成: {report['memory_count']} 条记忆"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 持久化 ===== -->
+  <h3>持久化</h3>
+
+  <!-- export_memories -->
+  <div class="method-card" id="export_memories">
+    <div class="method-header">
+      <div class="method-name">export_memories</div>
+      <div class="method-brief">导出记忆到文件</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">export_memories</span>(
+    filepath: <span class="type">str</span>,
+    format: <span class="type">str</span> = <span class="str">"json"</span>,
+    category: <span class="type">str</span> = <span class="st">None</span>,
+    include_embeddings: <span class="type">bool</span> = <span class="st">False</span>,
+) -> <span class="type">str</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">filepath</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>输出文件路径</td></tr>
+          <tr><td class="param-name">format</td><td><span class="param-type">str</span></td><td>格式："json" 或 "yaml"</td></tr>
+          <tr><td class="param-name">category</td><td><span class="param-type">str</span></td><td>按类别过滤，None 表示全部导出</td></tr>
+          <tr><td class="param-name">include_embeddings</td><td><span class="param-type">bool</span></td><td>是否包含嵌入向量（文件会更大）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>str</code> -- 导出的文件路径</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre><span class="cm"># 导出全部记忆为 JSON</span>
+memory.export_memories(<span class="st">"backup/memories.json"</span>)
+
+<span class="cm"># 仅导出特定类别</span>
+memory.export_memories(<span class="st">"backup/knowledge.json"</span>, category=<span class="st">"knowledge"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- import_memories -->
+  <div class="method-card" id="import_memories">
+    <div class="method-header">
+      <div class="method-name">import_memories</div>
+      <div class="method-brief">从文件导入记忆</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">import_memories</span>(
+    filepath: <span class="type">str</span>,
+    format: <span class="type">str</span> = <span class="st">None</span>,
+    overwrite: <span class="type">bool</span> = <span class="st">False</span>,
+) -> <span class="type">dict</span></div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">filepath</td><td><span class="param-type">str</span> <span class="badge badge-required">必填</span></td><td>输入文件路径</td></tr>
+          <tr><td class="param-name">format</td><td><span class="param-type">str</span></td><td>格式："json" 或 "yaml"，None 自动检测</td></tr>
+          <tr><td class="param-name">overwrite</td><td><span class="param-type">bool</span></td><td>是否覆盖已存在的记忆（按 ID）</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>dict</code> -- 导入统计 {"imported": int, "skipped": int, "errors": int}</div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>result = memory.import_memories(<span class="st">"backup/memories.json"</span>)
+print(f<span class="st">"导入 {result['imported']} 条，跳过 {result['skipped']} 条，错误 {result['errors']} 条"</span>)</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- save -->
+  <div class="method-card" id="save">
+    <div class="method-header">
+      <div class="method-name">save</div>
+      <div class="method-brief">保存所有持久化存储（向量索引、知识图谱、结构化存储备份）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">save</span>(directory: <span class="type">str</span> = <span class="str">"."</span>)</div>
+      <table class="params-table">
+        <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td class="param-name">directory</td><td><span class="param-type">str</span></td><td>保存目录路径，默认当前目录</td></tr>
+        </tbody>
+      </table>
+      <div class="return-block"><strong>返回值:</strong> <code>None</code></div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre>memory.save(<span class="st">"./data/snapshot"</span>)
+<span class="cm"># 保存 memory_index.faiss, knowledge_graph.json, structured_store_backup.db</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- close -->
+  <div class="method-card" id="close">
+    <div class="method-header">
+      <div class="method-name">close</div>
+      <div class="method-brief">释放所有资源（SQLite 连接、向量存储、衰减引擎后台线程等）</div>
+    </div>
+    <div class="method-body">
+      <div class="signature">
+<span class="kw">def</span> <span class="fn">close</span>()</div>
+      <div class="return-block"><strong>返回值:</strong> <code>None</code></div>
+      <div class="example">
+        <div class="example-label">示例</div>
+        <pre><span class="cm"># 手动关闭</span>
+memory.close()
+
+<span class="cm"># 推荐使用上下文管理器自动管理</span>
+<span class="kw">with</span> AgentMemory() <span class="kw">as</span> mem:
+    mem.remember(<span class="st">"重要信息"</span>)
+<span class="cm"># 退出时自动 save() + close()</span></pre>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end section -->
+
+</main>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center; padding: 32px; color: #94a3b8; font-size: 13px;">
+  Agent Memory System v11.0.0 API Reference
+</div>
+
+</body>
+</html>

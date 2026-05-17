@@ -1,0 +1,24 @@
+# Agent记忆系统 v2.0 依赖
+
+# 核心依赖（必须）
+numpy>=1.21.0
+pydantic>=2.0.0
+
+# 嵌入模型（至少安装一个）
+sentence-transformers>=2.0.0    # 本地语义嵌入（推荐）
+# openai>=1.0.0                 # OpenAI API 嵌入（可选）
+
+# 向量存储后端（至少安装一个）
+chromadb>=0.4.0                 # 嵌入式向量数据库（推荐）
+faiss-cpu>=1.7.0                # 高性能向量索引（可选）
+
+# 知识图谱
+networkx>=3.0
+
+# 结构化存储（Python标准库，无需安装）
+# sqlite3 - 内置
+
+# 开发依赖（可选）
+# pytest>=7.0.0
+# black>=22.0.0
+# mypy>=1.0.0
