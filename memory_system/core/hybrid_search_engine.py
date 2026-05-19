@@ -42,6 +42,7 @@ import heapq
 import logging
 import math
 import re
+import threading
 from abc import ABC, abstractmethod
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
@@ -237,6 +238,8 @@ class KeywordSearchStrategy(SearchStrategy):
         self._total_docs: int = 0
         # 平均文档长度（token 数）
         self._avg_doc_len: float = 0.0
+        # 线程锁，保护倒排索引的并发访问
+        self._lock = threading.RLock()
 
         # 尝试导入项目分词器
         self._tokenizer = self._load_tokenizer()
@@ -326,18 +329,20 @@ class KeywordSearchStrategy(SearchStrategy):
             content: 文档文本内容。
         """
         tokens = self._tokenize(content)
-        self._documents[doc_id] = {"content": content, "tokens": tokens}
+        
+        with self._lock:
+            self._documents[doc_id] = {"content": content, "tokens": tokens}
 
-        # 更新倒排索引
-        seen_tokens: set[str] = set()
-        for pos, token in enumerate(tokens):
-            self._inverted_index[token][doc_id].append(pos)
-            if token not in seen_tokens:
-                self._doc_freq[token] += 1
-                seen_tokens.add(token)
+            # 更新倒排索引
+            seen_tokens: set[str] = set()
+            for pos, token in enumerate(tokens):
+                self._inverted_index[token][doc_id].append(pos)
+                if token not in seen_tokens:
+                    self._doc_freq[token] += 1
+                    seen_tokens.add(token)
 
-        self._total_docs = len(self._documents)
-        self._recompute_stats()
+            self._total_docs = len(self._documents)
+            self._recompute_stats()
 
     def remove_document(self, doc_id: str) -> bool:
         """从索引中移除文档。
@@ -348,22 +353,24 @@ class KeywordSearchStrategy(SearchStrategy):
         Returns:
             成功移除返回 ``True``，文档不存在返回 ``False``。
         """
-        if doc_id not in self._documents:
-            return False
-        tokens = self._documents[doc_id]["tokens"]
-        token_set = set(tokens)
-        for token in token_set:
-            if token in self._inverted_index and doc_id in self._inverted_index[token]:
-                del self._inverted_index[token][doc_id]
-                if not self._inverted_index[token]:
-                    del self._inverted_index[token]
-                self._doc_freq[token] -= 1
-                if self._doc_freq[token] <= 0:
-                    del self._doc_freq[token]
-        del self._documents[doc_id]
-        self._total_docs = len(self._documents)
-        self._recompute_stats()
-        return True
+        with self._lock:
+            if doc_id not in self._documents:
+                return False
+            tokens = self._documents[doc_id]["tokens"]
+            token_set = set(tokens)
+            for token in token_set:
+                if token in self._inverted_index and doc_id in self._inverted_index[token]:
+                    del self._inverted_index[token][doc_id]
+                    if not self._inverted_index[token]:
+                        del self._inverted_index[token]
+                    self._doc_freq[token] -= 1
+                    if self._doc_freq[token] <= 0:
+                        del self._doc_freq[token]
+
+            del self._documents[doc_id]
+            self._total_docs = len(self._documents)
+            self._recompute_stats()
+            return True
 
     def _recompute_stats(self) -> None:
         """重新计算平均文档长度等统计信息。"""
@@ -476,11 +483,13 @@ class KeywordSearchStrategy(SearchStrategy):
 
         # 第一阶段：BM25 评分
         doc_scores: dict[str, float] = defaultdict(float)
-        for token in query_tokens:
-            if token not in self._inverted_index:
-                continue
-            for doc_id in self._inverted_index[token]:
-                doc_scores[doc_id] += self._bm25_score(token, doc_id)
+        with self._lock:
+            for token in query_tokens:
+                if token not in self._inverted_index:
+                    continue
+                # 遍历前先复制数据，避免迭代时修改
+                for doc_id in list(self._inverted_index[token].keys()):
+                    doc_scores[doc_id] += self._bm25_score(token, doc_id)
 
         if not doc_scores:
             logger.debug("关键词搜索无 BM25 命中，查询='%s'", query)
@@ -492,26 +501,29 @@ class KeywordSearchStrategy(SearchStrategy):
         fuzzy_limit = min(top_k * 3, len(bm25_candidates))
 
         hits: list[SearchHit] = []
-        for doc_id, bm25_score in bm25_candidates[:fuzzy_limit]:
-            content = self._documents[doc_id]["content"]
-            fuzzy_score = self._fuzzy_match_score(query, content)
-            # 综合得分 = BM25 + fuzzy_weight * fuzzy_score
-            # fuzzy_score 范围 [0,1]，BM25 通常范围较大，这里对 BM25 做归一化
-            max_bm25 = bm25_candidates[0][1] if bm25_candidates else 1.0
-            normalized_bm25 = bm25_score / max_bm25 if max_bm25 > 0 else 0.0
-            combined_score = normalized_bm25 + fuzzy_weight * fuzzy_score
+        with self._lock:  # 获取锁来安全地访问文档数据
+            for doc_id, bm25_score in bm25_candidates[:fuzzy_limit]:
+                if doc_id not in self._documents:
+                    continue  # 文档可能已被删除，跳过
+                content = self._documents[doc_id]["content"]
+                fuzzy_score = self._fuzzy_match_score(query, content)
+                # 综合得分 = BM25 + fuzzy_weight * fuzzy_score
+                # fuzzy_score 范围 [0,1]，BM25 通常范围较大，这里对 BM25 做归一化
+                max_bm25 = bm25_candidates[0][1] if bm25_candidates else 1.0
+                normalized_bm25 = bm25_score / max_bm25 if max_bm25 > 0 else 0.0
+                combined_score = normalized_bm25 + fuzzy_weight * fuzzy_score
 
-            if combined_score >= min_score:
-                hits.append(
-                    SearchHit(
-                        id=doc_id,
-                        content=content,
-                        score=round(combined_score, 6),
-                        source=self.name,
-                        metadata={"bm25_score": round(bm25_score, 6),
-                                  "fuzzy_score": round(fuzzy_score, 6)},
+                if combined_score >= min_score:
+                    hits.append(
+                        SearchHit(
+                            id=doc_id,
+                            content=content,
+                            score=round(combined_score, 6),
+                            source=self.name,
+                            metadata={"bm25_score": round(bm25_score, 6),
+                                      "fuzzy_score": round(fuzzy_score, 6)},
+                        )
                     )
-                )
 
         hits.sort(key=lambda h: h.score, reverse=True)
         results = hits[:top_k]

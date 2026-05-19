@@ -19,9 +19,9 @@ import json
 import random
 import string
 
-sys.path.insert(0, "/workspace/agent_memory_system")
+sys.path.insert(0, "/workspace/agent-memory-system")
 
-from memory_system.core.agent_memory_manager import AgentMemory, AgentMemoryConfig
+from memory_system import AgentMemory, AgentMemoryConfig
 
 
 def get_memory_usage():

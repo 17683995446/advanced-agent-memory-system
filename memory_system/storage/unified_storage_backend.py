@@ -24,13 +24,22 @@ from typing import Any, Generic, Optional, TypeVar
 import numpy as np
 from pydantic import BaseModel
 
-from memory_system.infra.blinker_event_bus import (
-    EventBus,
-    StorageEvent,
-    StorageEventType,
-    StorageSource,
-    get_event_bus,
-)
+try:
+    from memory_system.infra.blinker_event_bus import (
+        EventBus,
+        StorageEvent,
+        StorageEventType,
+        StorageSource,
+        get_event_bus,
+    )
+    _event_bus_available = True
+except ImportError:
+    _event_bus_available = False
+    EventBus = None
+    StorageEvent = None
+    StorageEventType = None
+    StorageSource = None
+    get_event_bus = None
 
 logger = logging.getLogger(__name__)
 
@@ -134,14 +143,18 @@ class UnifiedStorage:
         vector_backend: Optional[Any] = None,
         structured_backend: Optional[Any] = None,
         cache_backend: Optional[Any] = None,
-        event_bus: Optional[EventBus] = None,
+        event_bus: Optional[Any] = None,
         enable_events: bool = True,
     ):
         self._vector = vector_backend
         self._structured = structured_backend
         self._cache = cache_backend
-        self._event_bus = event_bus or get_event_bus()
-        self._enable_events = enable_events
+        self._event_bus = None
+        self._enable_events = enable_events and _event_bus_available
+        if self._enable_events and event_bus:
+            self._event_bus = event_bus
+        elif self._enable_events and get_event_bus:
+            self._event_bus = get_event_bus()
         
         # 内存缓存（默认）
         if self._cache is None:
@@ -209,12 +222,15 @@ class UnifiedStorage:
         self._store_to_cache(record)
         
         # 发送事件
-        if self._enable_events:
-            self._event_bus.emit(
-                StorageEventType.MEMORY_ADD,
-                source=StorageSource.LONG_TERM,
-                data=record.model_dump(),
-            )
+        if self._enable_events and self._event_bus is not None and _event_bus_available:
+            try:
+                self._event_bus.emit(
+                    StorageEventType.MEMORY_ADD,
+                    source=StorageSource.LONG_TERM,
+                    data=record.model_dump(),
+                )
+            except Exception:
+                pass
         
         logger.debug("Stored record %s", record.id)
         return record
@@ -228,20 +244,26 @@ class UnifiedStorage:
         # 尝试从缓存获取
         cached = self._get_from_cache(id)
         if cached is not None:
-            if self._enable_events:
+            if self._enable_events and self._event_bus is not None and _event_bus_available:
+                try:
+                    self._event_bus.emit(
+                        StorageEventType.CACHE_HIT,
+                        source=StorageSource.CACHE,
+                        data={"id": id},
+                    )
+                except Exception:
+                    pass
+            return cached
+        
+        if self._enable_events and self._event_bus is not None and _event_bus_available:
+            try:
                 self._event_bus.emit(
-                    StorageEventType.CACHE_HIT,
+                    StorageEventType.CACHE_MISS,
                     source=StorageSource.CACHE,
                     data={"id": id},
                 )
-            return cached
-        
-        if self._enable_events:
-            self._event_bus.emit(
-                StorageEventType.CACHE_MISS,
-                source=StorageSource.CACHE,
-                data={"id": id},
-            )
+            except Exception:
+                pass
         
         # 从向量存储获取
         if self._vector is not None:
@@ -291,12 +313,15 @@ class UnifiedStorage:
         results = self._search_vector(query_embedding, top_k, filter_dict)
         
         # 发送事件
-        if self._enable_events:
-            self._event_bus.emit(
-                StorageEventType.VECTOR_SEARCH,
-                source=StorageSource.VECTOR_STORE,
-                data={"top_k": top_k, "results_count": len(results)},
-            )
+        if self._enable_events and self._event_bus is not None and _event_bus_available:
+            try:
+                self._event_bus.emit(
+                    StorageEventType.VECTOR_SEARCH,
+                    source=StorageSource.VECTOR_STORE,
+                    data={"top_k": top_k, "results_count": len(results)},
+                )
+            except Exception:
+                pass
         
         return results
     
@@ -316,12 +341,15 @@ class UnifiedStorage:
         self._delete_from_cache(id)
         
         # 发送事件
-        if self._enable_events and deleted:
-            self._event_bus.emit(
-                StorageEventType.MEMORY_DELETE,
-                source=StorageSource.LONG_TERM,
-                data={"id": id},
-            )
+        if self._enable_events and self._event_bus is not None and _event_bus_available and deleted:
+            try:
+                self._event_bus.emit(
+                    StorageEventType.MEMORY_DELETE,
+                    source=StorageSource.LONG_TERM,
+                    data={"id": id},
+                )
+            except Exception:
+                pass
         
         return deleted
     
@@ -348,12 +376,15 @@ class UnifiedStorage:
         self._store_to_cache(record)
         
         # 发送事件
-        if self._enable_events:
-            self._event_bus.emit(
-                StorageEventType.MEMORY_UPDATE,
-                source=StorageSource.LONG_TERM,
-                data={"id": id, "changes": kwargs},
-            )
+        if self._enable_events and self._event_bus is not None and _event_bus_available:
+            try:
+                self._event_bus.emit(
+                    StorageEventType.MEMORY_UPDATE,
+                    source=StorageSource.LONG_TERM,
+                    data={"id": id, "changes": kwargs},
+                )
+            except Exception:
+                pass
         
         return True
     

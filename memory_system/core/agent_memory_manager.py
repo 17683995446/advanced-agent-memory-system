@@ -875,8 +875,12 @@ class AgentMemory:
             top_k = self.config.default_top_k
 
         # 验证 top_k 范围
-        if not isinstance(top_k, int) or top_k <= 0:
-            raise ValueError(f"top_k must be a positive integer, got {top_k}")
+        if not isinstance(top_k, int) or top_k < 0:
+            raise ValueError(f"top_k must be a non-negative integer, got {top_k}")
+        
+        # top_k 为 0 时直接返回空结果
+        if top_k == 0:
+            return []
 
         self._check_closed()
         if exclude_sources is None:
@@ -1045,11 +1049,6 @@ class AgentMemory:
             if hit.source == "graph":
                 continue
 
-            # 统一来源标记：vector/keyword 都来自长期记忆
-            source = "long_term"
-            if source in exclude_sources:
-                continue
-
             # 跳过结构化键值对
             content = hit.content
             if "structured" in exclude_sources and ": " in content and len(content.split(": ")) == 2:
@@ -1064,11 +1063,12 @@ class AgentMemory:
             except Exception:
                 continue
 
-            # 获取完整记录信息（memory_type, category, importance, timestamp）
+            # 获取完整记录信息（memory_type, category, importance, timestamp, source）
             memory_type = hit.metadata.get("memory_type")
             category = hit.metadata.get("category")
             importance = hit.metadata.get("importance", 0.5)
             timestamp = hit.metadata.get("timestamp", 0)
+            source = hit.metadata.get("source", "unknown")
             try:
                 original = self.long_term.get(hit.id)
                 if original:
@@ -1078,12 +1078,22 @@ class AgentMemory:
                         category = getattr(original, "category", "general")
                     importance = getattr(original, "importance", importance)
                     timestamp = getattr(original, "timestamp", timestamp)
+                    # 从原始记录获取真实 source
+                    original_source = getattr(original, "source", None)
+                    if original_source and original_source != "unknown":
+                        source = original_source
             except Exception:
                 pass
             if not memory_type:
                 memory_type = "semantic"
             if not category:
                 category = "general"
+            if source == "unknown":
+                source = "long_term"
+
+            # 在获取真实 source 之后，再检查排除来源
+            if source in exclude_sources:
+                continue
 
             results.append({
                 "content": content,
@@ -2138,7 +2148,7 @@ class AgentMemory:
         format: str = "json",
         category: str = None,
         include_embeddings: bool = False,
-    ) -> str:
+    ) -> dict:
         """导出记忆到文件。
 
         Args:
@@ -2148,7 +2158,7 @@ class AgentMemory:
             include_embeddings: 是否包含嵌入向量
 
         Returns:
-            导出的文件路径
+            导出统计 {"exported": int, "filepath": str}
         """
         self._check_closed()
         from memory_system.processing.memory_data_serializer import (
@@ -2180,7 +2190,7 @@ class AgentMemory:
         fmt = ExportFormat.JSON if format == "json" else ExportFormat.YAML
         serializer = MemorySerializer()
         serializer.export_to_file(export_data, filepath, format=fmt)
-        return filepath
+        return {"exported": len(export_data), "filepath": filepath}
 
     def import_memories(
         self,

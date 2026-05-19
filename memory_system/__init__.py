@@ -148,17 +148,30 @@ except ImportError:
     _redis_available = False
 
 # Event Bus (v3.0)
-from .infra.blinker_event_bus import (
-    EventBus,
-    StorageEvent,
-    StorageEventType,
-    StorageSource,
-    get_event_bus,
-    reset_event_bus,
-    on_memory_add,
-    on_memory_update,
-    on_memory_delete,
-)
+try:
+    from .infra.blinker_event_bus import (
+        EventBus,
+        StorageEvent,
+        StorageEventType,
+        StorageSource,
+        get_event_bus,
+        reset_event_bus,
+        on_memory_add,
+        on_memory_update,
+        on_memory_delete,
+    )
+    _event_bus_available = True
+except ImportError:
+    _event_bus_available = False
+    EventBus = None
+    StorageEvent = None
+    StorageEventType = None
+    StorageSource = None
+    get_event_bus = None
+    reset_event_bus = None
+    on_memory_add = None
+    on_memory_update = None
+    on_memory_delete = None
 
 # Unified Storage (v3.0)
 from .storage.unified_storage_backend import (

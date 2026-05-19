@@ -14,11 +14,22 @@ import time
 import threading
 import traceback
 
-sys.path.insert(0, '/workspace/agent_memory_system')
+sys.path.insert(0, '/workspace/agent-memory-system')
 
-from memory_system import AgentMemory
+from memory_system import AgentMemory, AgentMemoryConfig, LongTermMemoryConfig
 
 issues_found = []
+
+
+def create_test_memory():
+    """创建测试用的 AgentMemory 实例"""
+    config = AgentMemoryConfig(
+        long_term=LongTermMemoryConfig(
+            embedding={"provider": "fake", "fake_dimension": 64},
+            vector_store={"backend": "memory"},
+        )
+    )
+    return AgentMemory(config=config)
 
 
 def record_issue(severity, category, description, expected, actual):
@@ -45,7 +56,7 @@ def test_edge_cases():
     print("🧪 1. 边界条件测试")
     print("="*70)
 
-    memory = AgentMemory()
+    memory = create_test_memory()
 
     # 1.1 空字符串输入
     try:
@@ -136,7 +147,7 @@ def test_exception_paths():
 
     # 2.1 关闭后操作
     try:
-        memory = AgentMemory()
+        memory = create_test_memory()
         memory.close()
         memory.remember("关闭后存储", memory_type="fact", category="test", importance=0.5, source="test")
         record_issue("high", "关闭后操作", "close()后操作应抛出明确异常", "抛出RuntimeError", "无异常")
@@ -147,7 +158,7 @@ def test_exception_paths():
 
     # 2.2 重复关闭
     try:
-        memory = AgentMemory()
+        memory = create_test_memory()
         memory.close()
         memory.close()
         print(f"  ℹ️ 重复关闭: 未抛异常(幂等)")
@@ -156,7 +167,7 @@ def test_exception_paths():
 
     # 2.3 无效memory_type
     try:
-        memory = AgentMemory()
+        memory = create_test_memory()
         mid = memory.remember("测试", memory_type="invalid_type", category="test", importance=0.5, source="test")
         print(f"  ℹ️ 无效memory_type: 存储(id={mid[:8]}...)")
     except Exception as e:
@@ -166,7 +177,7 @@ def test_exception_paths():
 
     # 2.4 get_stats在close后
     try:
-        memory = AgentMemory()
+        memory = create_test_memory()
         memory.close()
         stats = memory.get_stats()
         if stats is not None:
@@ -186,7 +197,7 @@ def test_data_consistency():
     print("🧪 3. 数据一致性测试")
     print("="*70)
 
-    memory = AgentMemory()
+    memory = create_test_memory()
 
     # 3.1 存储后立即检索
     test_content = "唯一标识符XYZ123的测试内容"
@@ -248,7 +259,7 @@ def test_api_contract():
     print("🧪 4. API契约测试")
     print("="*70)
 
-    memory = AgentMemory()
+    memory = create_test_memory()
 
     # 4.1 remember返回值类型
     mid = memory.remember("测试", memory_type="fact", category="test", importance=0.5, source="test")
@@ -327,7 +338,7 @@ def test_resource_management():
     try:
         instances = []
         for i in range(20):
-            m = AgentMemory()
+            m = create_test_memory()
             m.remember(f"实例{i}的测试数据", memory_type="fact", category="leak-test", importance=0.5, source="test")
             instances.append(m)
 
@@ -341,7 +352,7 @@ def test_resource_management():
 
     # 5.2 单实例大量操作
     try:
-        memory = AgentMemory()
+        memory = create_test_memory()
         start_mem = 0
         for i in range(200):
             memory.remember(f"压力测试数据{i}", memory_type="fact", category="stress", importance=0.5, source="test")
@@ -359,7 +370,7 @@ def test_resource_management():
 
     # 5.3 并发安全基础测试
     try:
-        memory = AgentMemory()
+        memory = create_test_memory()
         errors = []
 
         def worker(worker_id):
@@ -404,7 +415,7 @@ def test_knowledge_graph_deep():
     print("🧪 6. 知识图谱深度测试")
     print("="*70)
 
-    memory = AgentMemory()
+    memory = create_test_memory()
 
     # 6.1 大量实体和关系
     entities = ["Flask", "Django", "FastAPI", "Werkzeug", "Jinja2", "SQLAlchemy",
