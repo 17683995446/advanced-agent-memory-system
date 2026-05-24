@@ -13,6 +13,7 @@
 import hashlib
 import time
 import uuid
+import threading  # 新增：并发安全锁
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -80,6 +81,8 @@ class LongTermMemory:
         self.store: VectorStoreBackend = VectorStoreFactory.create(backend=backend, **vs_kwargs)
         # 内容哈希索引：content_hash -> record_id，O(1) 去重查找
         self._content_hash_index: dict[str, str] = {}
+        # 新增：并发安全锁，保护哈希索引
+        self._lock = threading.RLock()
 
     # ------------------------------------------------------------------
     # 核心方法
@@ -115,48 +118,52 @@ class LongTermMemory:
         if embedding is None:
             embedding = self.embedder.encode(content)
 
-        # 内容去重检查：O(1) 哈希索引查找
+        # 内容去重检查：加锁保护哈希索引
         target_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
-        existing_id = self._content_hash_index.get(target_hash)
-        if existing_id is not None:
-            # 验证记录确实存在（可能已被外部删除）
-            existing_record = self.store.get(existing_id)
-            if existing_record is not None:
-                return existing_id
-            else:
-                # 索引不一致，清理
-                del self._content_hash_index[target_hash]
+        
+        with self._lock:  # 新增：加锁保护
+            existing_id = self._content_hash_index.get(target_hash)
+            if existing_id is not None:
+                # 验证记录确实存在（可能已被外部删除）
+                existing_record = self.store.get(existing_id)
+                if existing_record is not None:
+                    return existing_id
+                else:
+                    # 索引不一致，清理
+                    del self._content_hash_index[target_hash]
+            
+            # 新建记录，保持锁期间完成索引维护
+            import uuid
+            record_id = uuid.uuid4().hex[:16]
 
-        import uuid
-        record_id = uuid.uuid4().hex[:16]
-
-        record = MemoryRecord(
-            id=record_id,
-            content=content,
-            embedding=embedding,
-            memory_type=memory_type,
-            category=category,
-            importance=importance,
-            tags=tags or [],
-            metadata=metadata or {},
-            source=source,
-        )
-        stored_id = self.store.add(record)
-        # 维护哈希索引
-        self._content_hash_index[target_hash] = stored_id
-        return stored_id
+            record = MemoryRecord(
+                id=record_id,
+                content=content,
+                embedding=embedding,
+                memory_type=memory_type,
+                category=category,
+                importance=importance,
+                tags=tags or [],
+                metadata=metadata or {},
+                source=source,
+            )
+            stored_id = self.store.add(record)
+            # 维护哈希索引（仍在锁内）
+            self._content_hash_index[target_hash] = stored_id
+            return stored_id
 
     def _find_by_content(self, content: str):
         """通过内容哈希查找已有记忆，用于去重。O(1) 复杂度。"""
         target_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
-        existing_id = self._content_hash_index.get(target_hash)
-        if existing_id is None:
-            return None
-        record = self.store.get(existing_id)
-        if record is None:
-            del self._content_hash_index[target_hash]
-            return None
-        return record
+        with self._lock:  # 加锁保护
+            existing_id = self._content_hash_index.get(target_hash)
+            if existing_id is None:
+                return None
+            record = self.store.get(existing_id)
+            if record is None:
+                del self._content_hash_index[target_hash]
+                return None
+            return record
 
     def recall(
         self,
@@ -232,12 +239,13 @@ class LongTermMemory:
 
     def delete(self, memory_id: str) -> bool:
         """删除指定记忆"""
-        # 清理内容哈希索引
-        record = self.store.get(memory_id)
-        if record is not None:
-            content_hash = record.content_hash
-            if self._content_hash_index.get(content_hash) == memory_id:
-                del self._content_hash_index[content_hash]
+        with self._lock:  # 加锁保护
+            # 先获取记录，然后重新计算哈希值（因为 content_hash 可能不存在）
+            record = self.store.get(memory_id)
+            if record is not None:
+                target_hash = hashlib.sha256(record.content.encode("utf-8")).hexdigest()
+                if self._content_hash_index.get(target_hash) == memory_id:
+                    del self._content_hash_index[target_hash]
         return self.store.delete(memory_id)
 
     def forget(self, memory_id: str) -> bool:
